@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Weather</string>
+    <string name="dashedLine">---</string>
+    <string name="humidity">Humidity</string>
+    <string name="wind">Wind</string>
+    <string name="visibility">Visibility</string>
+    <string name="today">Today</string>
+    <string name="weather_report">Weather Report</string>
+    <string name="next_5_days">Next 5 Days</string>
+</resources>
