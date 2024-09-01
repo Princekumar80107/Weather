@@ -36,51 +36,62 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    TextView cityName, date, temperature, condition, humidity, windSpeed, visibility, next5Days, conditionDescription;
-    RecyclerView hourlyView;
-    LottieAnimationView lottieAnimationView;
-    SearchView searchView;
-    SwipeRefreshLayout swipeRefreshLayout;
+    private TextView cityName, date, temperature, condition, humidity, windSpeed, visibility, next5Days, conditionDescription;
+    private RecyclerView hourlyView;
+    private LottieAnimationView lottieAnimationView;
+    private SearchView searchView;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        findId(); // finding the id of all view of the xml file
+        initializeViews();
+        setupWeatherData("Chandigarh");
+        setupSearchFunctionality();
+        setupSwipeRefresh();
+        setupNext5DaysClickListener();
+    }
 
-        addWeatherData("Chandigarh");
+    private void initializeViews() {
+        cityName = findViewById(R.id.cityName);
+        date = findViewById(R.id.date);
+        lottieAnimationView = findViewById(R.id.lottieAnimationView);
+        temperature = findViewById(R.id.temperature);
+        condition = findViewById(R.id.condition);
+        humidity = findViewById(R.id.humidity);
+        windSpeed = findViewById(R.id.wind);
+        visibility = findViewById(R.id.visibility);
+        hourlyView = findViewById(R.id.hourlyView);
+        next5Days = findViewById(R.id.next_5_days);
+        searchView = findViewById(R.id.searchView);
+        conditionDescription = findViewById(R.id.conditionDescription);
+        swipeRefreshLayout = findViewById(R.id.refreshLayout);
+    }
 
-        SearchCity();
-
-        next5Days.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(getApplicationContext(), FutureDayWeather.class);
-                intent.putExtra("cityName", cityName.getText().toString());
-                startActivity(intent);
-            }
-        });
-
-        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                addWeatherData("Chandigarh");
-                Toast.makeText(MainActivity.this, "Refreshing...", Toast.LENGTH_SHORT).show();
-                swipeRefreshLayout.setRefreshing(false);
-            }
+    private void setupNext5DaysClickListener() {
+        next5Days.setOnClickListener(view -> {
+            Intent intent = new Intent(getApplicationContext(), FutureDayWeather.class);
+            intent.putExtra("cityName", cityName.getText().toString());
+            startActivity(intent);
         });
     }
 
-    private void SearchCity() {
+    private void setupSwipeRefresh() {
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            setupWeatherData(cityName.getText().toString());
+            Toast.makeText(MainActivity.this, "Refreshing...", Toast.LENGTH_SHORT).show();
+            swipeRefreshLayout.setRefreshing(false);
+        });
+    }
+
+    private void setupSearchFunctionality() {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                addWeatherData(query);
-
+                setupWeatherData(query);
                 searchView.setQuery("", false);
-
-                Toast.makeText(MainActivity.this, "Refreshing...", Toast.LENGTH_SHORT).show();
                 return false;
             }
 
@@ -91,102 +102,94 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void addWeatherData(String city) {
-        ArrayList<HourlyWeatherDataModel> hourlyDataModelArrayList = new ArrayList<>();
-
+    private void setupWeatherData(String city) {
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url = "https://api.openweathermap.org/data/2.5/forecast?q="+ city +"&appid=0f26150d15bc00aefc58595aad69934c";
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                (Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
-                    @SuppressLint("SetTextI18n")
-                    @Override
-                    public void onResponse(JSONObject response){
-                        try {
-                            JSONObject City = response.getJSONObject("city");
-                            JSONArray list = response.getJSONArray("list");
-                            date.setText(list.getJSONObject(0).getString("dt_txt").substring(0, 10));
-                            cityName.setText(City.getString("name"));
+        String url = "https://api.openweathermap.org/data/2.5/forecast?q=" + city + "&appid=9d19bf6e7b55e97eff19cb5b9b278751";
 
-                            for(int i = 0; i < 10; i++) // for maintaining the 3 hourly weather data
-                            {
-                                JSONObject main = list.getJSONObject(i).getJSONObject("main");
-                                JSONArray weather = list.getJSONObject(i).getJSONArray("weather");
-                                int temp = main.getInt("temp");
-                                String conditionView = weather.getJSONObject(0).getString("main");
-                                temp -= 273.15;
-
-                                if(i == 0) // applying the data of the current weather
-                                {
-                                    temperature.setText(Integer.toString(temp) + "°C");
-                                    condition.setText(conditionView);
-                                    conditionDescription.setText(weather.getJSONObject(0).getString("description"));
-                                    humidity.setText(main.getString("humidity") + "%");
-                                    windSpeed.setText(list.getJSONObject(0).getJSONObject("wind").getString("speed") + "Km/hr");
-                                    visibility.setText(Integer.toString(list.getJSONObject(0).getInt("visibility") / 1000) + "Km");
-                                }
-
-                                String time = list.getJSONObject(i).getString("dt_txt").substring(11, 16);
-
-                                switch (conditionView) {  // applying lottie animation to the hourly weather forecast
-                                    case "Clear Sky":
-                                    case "Sunny":
-                                    case "Clear":
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.sunny, Integer.toString(temp) + "°C", time));
-                                        break;
-                                    case "Partly Clouds":
-                                    case "Clouds":
-                                    case "overcast clouds":
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.cloudy_day, Integer.toString(temp) + "°C", time));
-                                        break;
-                                    case "Mist":
-                                    case "Foggy":
-                                    case "Haze":
-                                    case "Smoke":
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.fogg_mist, Integer.toString(temp) + "°C", time));
-                                        break;
-                                    case "Rain":
-                                    case "Light Rain":
-                                    case "Drizzle":
-                                    case "Moderate Rain":
-                                    case "Showers":
-                                    case "Heavy Rain":
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.rain, Integer.toString(temp) + "°C", time));
-                                        break;
-                                    case "Light Snow":
-                                    case "Moderate Snow":
-                                    case "Heavy Snow":
-                                    case "Blizzard":
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.snow_fall, Integer.toString(temp) + "°C", time));
-                                        break;
-                                    default:
-                                        hourlyDataModelArrayList.add(new HourlyWeatherDataModel(R.raw.sunny, Integer.toString(temp) + "°C", time));
-                                        break;
-                                }
-                            }
-                            hourlyView.setLayoutManager(new LinearLayoutManager(MainActivity.this, LinearLayoutManager.HORIZONTAL, false));
-                            HourlyWeatherAdapter adapter = new HourlyWeatherAdapter(MainActivity.this, hourlyDataModelArrayList);
-                            hourlyView.setAdapter(adapter);
-
-                            changeImageAccordingToWeatherCondition(condition.getText().toString()); // changing the lottie animation to the current weather report
-                        } catch (JSONException e) {
-                            Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
-                    }
-                });
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
+                this::parseWeatherData,
+                error -> Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show());
 
         queue.add(jsonObjectRequest);
     }
 
-    private void changeImageAccordingToWeatherCondition(String string) {
+    @SuppressLint("SetTextI18n")
+    private void parseWeatherData(JSONObject response) {
+        try {
+            JSONObject city = response.getJSONObject("city");
+            JSONArray list = response.getJSONArray("list");
 
+            cityName.setText(city.getString("name"));
+            date.setText(list.getJSONObject(0).getString("dt_txt").substring(0, 10));
+
+            ArrayList<HourlyWeatherDataModel> hourlyData = new ArrayList<>();
+            for (int i = 0; i < 10; i++) { // First 10 3-hourly forecasts
+                JSONObject weatherData = list.getJSONObject(i);
+                populateHourlyWeather(hourlyData, weatherData, i == 0);
+            }
+
+            setupHourlyWeatherAdapter(hourlyData);
+        } catch (JSONException e) {
+            Toast.makeText(MainActivity.this, "Something went wrong", Toast.LENGTH_SHORT).show();
+            throw new RuntimeException(e);
+        }
     }
 
-    private void findId() {
+    private void populateHourlyWeather(ArrayList<HourlyWeatherDataModel> hourlyData, JSONObject weatherData, boolean isCurrent) throws JSONException {
+        JSONObject main = weatherData.getJSONObject("main");
+        JSONArray weatherArray = weatherData.getJSONArray("weather");
+        double temp = main.getDouble("temp") - 273.15; // Kelvin to Celsius
+        String conditionView = weatherArray.getJSONObject(0).getString("main");
+
+        if (isCurrent) {
+            updateCurrentWeather(main, weatherData, weatherArray, temp, conditionView);
+        }
+
+        String time = weatherData.getString("dt_txt").substring(11, 16);
+        int animationResource = getAnimationResource(conditionView);
+        hourlyData.add(new HourlyWeatherDataModel(animationResource, String.format("%.1f°C", temp), time));
+    }
+
+    private void updateCurrentWeather(JSONObject main, JSONObject weatherData, JSONArray weatherArray, double temp, String conditionView) throws JSONException {
+        temperature.setText(String.format("%.1f°C", temp));
+        condition.setText(conditionView);
+        conditionDescription.setText(weatherArray.getJSONObject(0).getString("description"));
+        humidity.setText(main.getString("humidity") + "%");
+        windSpeed.setText(weatherData.getJSONObject("wind").getString("speed") + "Km/hr");
+        visibility.setText(weatherData.getInt("visibility") / 1000 + "Km");
+        updateLottieAnimation(conditionView);
+    }
+
+    private int getAnimationResource(String conditionView) {
+        switch (conditionView) {
+            case "Clear":
+                return R.raw.sunny;
+            case "Clouds":
+                return R.raw.cloudy_day;
+            case "Mist":
+            case "Fog":
+            case "Haze":
+            case "Smoke":
+                return R.raw.fogg_mist;
+            case "Rain":
+            case "Drizzle":
+            case "Showers":
+                return R.raw.rain;
+            case "Snow":
+                return R.raw.snow_fall;
+            default:
+                return R.raw.sunny;
+        }
+    }
+
+    private void updateLottieAnimation(String conditionView) {
+        lottieAnimationView.setAnimation(getAnimationResource(conditionView));
+        lottieAnimationView.playAnimation();
+    }
+
+    private void setupHourlyWeatherAdapter(ArrayList<HourlyWeatherDataModel> hourlyData) {
+        hourlyView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        HourlyWeatherAdapter adapter = new HourlyWeatherAdapter(this, hourlyData);
+        hourlyView.setAdapter(adapter);
     }
 }
