@@ -7,4 +7,11 @@
     <string name="today">Today</string>
     <string name="weather_report">Weather Report</string>
     <string name="next_5_days">Next 5 Days</string>
+    <string name="city_name">City Name</string>
+    <string name="date">Date</string>
+    <string name="empty">---</string>
+    <string name="condition">Condition</string>
+    <string name="description">description</string>
+    <string name="next_5_days_"><![CDATA[Next 5 Days >]]></string>
+    <string name="today_s_forecast">Today\'s Forecast</string>
 </resources>
